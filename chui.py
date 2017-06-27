@@ -1,4 +1,3 @@
-
 import time
 import math
 from six.moves import xrange  # pylint: disable=redefined-builtin
@@ -6,10 +5,10 @@ import tensorflow as tf
 import numpy as np
 import random
 
-FEATURE_NUMBER = 10
+FEATURE_NUMBER = 3
 BATCH_SIZE = 32
-LEARNING_RATE = 0.001
-NUMBER_ITERATION = 10
+LEARNING_RATE = 0.00001
+NUMBER_ITERATION = 1000
 
 def placeholder_inputs():
   feature_placeholder = tf.placeholder(tf.float32, shape=(BATCH_SIZE,
@@ -19,7 +18,6 @@ def placeholder_inputs():
 
 
 def fill_feed_dict(data, feature_pl, labels_pl):
-  # TODO
   feed_dict = {
       feature_pl: data[:,:-1],
       labels_pl: data[:,-1],
@@ -33,13 +31,11 @@ def inference(feature_pl):
         tf.truncated_normal([FEATURE_NUMBER, 1],
                             stddev=1.0 / math.sqrt(float(FEATURE_NUMBER))),
         name='weights')
-    biases = tf.Variable(tf.zeros([1]),
-                         name='biases')
-    logits = tf.matmul(feature_pl, weights) + biases
-  return logits
+    logits = tf.matmul(feature_pl, weights)
+  return logits, weights
 
-def get_loss(logits, labels):
-  loss = tf.reduce_mean(tf.square(logits-labels))
+def get_loss(logits, prediction):
+  loss = tf.reduce_mean(tf.square(logits-prediction))
   return loss
 
 def get_train_op(loss, learning_rate):
@@ -49,6 +45,7 @@ def get_train_op(loss, learning_rate):
   train_op = optimizer.minimize(loss)
   return train_op
 
+
 def run_training(dataset):
   # Tell TensorFlow that the model will be built into the default Graph.
   with tf.Graph().as_default():
@@ -56,7 +53,7 @@ def run_training(dataset):
     feature_placeholder, labels_placeholder = placeholder_inputs()
 
     # Build a Graph that computes predictions from the inference model.
-    logits = inference(feature_placeholder)
+    logits, weights = inference(feature_placeholder)
 
     # Add to the Graph the Ops for loss calculation.
     loss = get_loss(logits, labels_placeholder)
@@ -83,13 +80,60 @@ def run_training(dataset):
 
       _, loss_value = sess.run([train_op, loss],
                                feed_dict=feed_dict)
-      print('haha')
+      print(loss_value)
+    print("Weight:"+str(sess.run(weights)))
+    print("Begin to calculate variance:") 
+    feed_dict = fill_feed_dict(dataset[-BATCH_SIZE:,:], feature_placeholder,
+                                 labels_placeholder)
+    variance = sess.run(loss, feed_dict=feed_dict)
+    print(variance)
+    
 
+def dummy_sample():
+  x=np.zeros((2,1000))
+  x[0,:]=np.random.randn(1000)+100
+  for i in range(1000):
+      x[1][i]=1
+  x[0][8]=150
+  x[1][8]=0
+  x[0][453]=60
+  x[1][453]=0
+  y1=np.zeros((997,5))
+  for j in range(997):
+      y1[j][4]=1
+  for k in range(997):
+      y1[k][0]=x[0][k]
+      y1[k][1]=x[0][k+1]
+      y1[k][2]=x[0][k+2]
+      y1[k][3]=x[0][k+3]
+  for k in range(997):
+      if(x[1][k]==0):
+          y1[k][4]=0
+          print y1[k]
+      if(x[1][k+1]==0):
+          y1[k][4]=0
+          print y1[k]
+      if(x[1][k+2]==0):
+          y1[k][4]=0
+          print y1[k]
+      if(x[1][k+3]==0):
+          y1[k][4]=0
+          print y1[k]
+  y2=[]
+  for k in range(997):
+      if(y1[k][4]!=0):
+          col=[y1[k][0],y1[k][1],y1[k][2],y1[k][3]]
+          y2.append(col)
+  z=[]
+  for k in range(len(y2)):
+      col=[y2[k][2]+y2[k][0]-2*y2[k][1],y2[k][2]-y2[k][1],y2[k][2],y2[k][3]]
+      z.append(col)
+  return np.array(z)
 
 def main():
   # TODO ADD DATA:
   # Because feature add label 
-  dataset = np.random.randn(5000, FEATURE_NUMBER+1)
+  dataset = dummy_sample()
   run_training(dataset)
 
 
