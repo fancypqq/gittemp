@@ -46,7 +46,7 @@ def get_train_op(loss, learning_rate):
   return train_op
 
 
-def run_training(dataset):
+def run_training(dataset, origin_data):
   # Tell TensorFlow that the model will be built into the default Graph.
   with tf.Graph().as_default():
     # Generate placeholders for the images and labels.
@@ -80,13 +80,17 @@ def run_training(dataset):
 
       _, loss_value = sess.run([train_op, loss],
                                feed_dict=feed_dict)
-      print(loss_value)
-    print("Weight:"+str(sess.run(weights)))
-    print("Begin to calculate variance:") 
     feed_dict = fill_feed_dict(dataset[-BATCH_SIZE:,:], feature_placeholder,
                                  labels_placeholder)
+    weights = sess.run(weights)
     variance = sess.run(loss, feed_dict=feed_dict)
-    print(variance)
+    an = origin_data[-1, -1]
+    an_1 = origin_data[-1, -2]
+    an_2 = origin_data[-1, -3]
+    mean=weights[-1]*an + weights[-2]*(an-an_1)+weights[-3]*(an+an_2-2*an_1)
+    #print(dataset)
+    print("Mean: "+str(mean))
+    print("Variance:"+str(variance))
     
 
 def dummy_sample():
@@ -109,16 +113,16 @@ def dummy_sample():
   for k in range(997):
       if(x[1][k]==0):
           y1[k][4]=0
-          print y1[k]
+          #print y1[k]
       if(x[1][k+1]==0):
           y1[k][4]=0
-          print y1[k]
+          #print y1[k]
       if(x[1][k+2]==0):
           y1[k][4]=0
-          print y1[k]
+          #print y1[k]
       if(x[1][k+3]==0):
           y1[k][4]=0
-          print y1[k]
+          #print y1[k]
   y2=[]
   for k in range(997):
       if(y1[k][4]!=0):
@@ -128,13 +132,13 @@ def dummy_sample():
   for k in range(len(y2)):
       col=[y2[k][2]+y2[k][0]-2*y2[k][1],y2[k][2]-y2[k][1],y2[k][2],y2[k][3]]
       z.append(col)
-  return np.array(z)
+  return np.array(z), np.array(y2)
 
 def main():
   # TODO ADD DATA:
   # Because feature add label 
-  dataset = dummy_sample()
-  run_training(dataset)
+  dataset, origin_data = dummy_sample()
+  run_training(dataset, origin_data)
 
 
 if __name__ == '__main__':
