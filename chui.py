@@ -9,6 +9,7 @@ FEATURE_NUMBER = 3
 BATCH_SIZE = 32
 LEARNING_RATE = 0.00001
 NUMBER_ITERATION = 1000
+MOVING_AVERAGE_LENGTH = 5
 
 def placeholder_inputs():
   feature_placeholder = tf.placeholder(tf.float32, shape=(BATCH_SIZE,
@@ -90,7 +91,7 @@ def run_training(dataset, origin_data):
     mean=weights[-1]*an + weights[-2]*(an-an_1)+weights[-3]*(an+an_2-2*an_1)
     #print(dataset)
     print("Mean: "+str(mean))
-    print("Variance:"+str(variance))
+    print("Variance: "+str(variance))
     
 
 def dummy_sample():
@@ -102,30 +103,39 @@ def dummy_sample():
   x[1][8]=0
   x[0][453]=60
   x[1][453]=0
-  y1=np.zeros((997,5))
-  for j in range(997):
-      y1[j][4]=1
-  for k in range(997):
-      y1[k][0]=x[0][k]
-      y1[k][1]=x[0][k+1]
-      y1[k][2]=x[0][k+2]
-      y1[k][3]=x[0][k+3]
-  for k in range(997):
-      if(x[1][k]==0):
-          y1[k][4]=0
-          #print y1[k]
-      if(x[1][k+1]==0):
-          y1[k][4]=0
-          #print y1[k]
-      if(x[1][k+2]==0):
-          y1[k][4]=0
-          #print y1[k]
-      if(x[1][k+3]==0):
-          y1[k][4]=0
-          #print y1[k]
+  return x
+
+def get_moving_average(data):
+  length = data.shape[1]
+  length = length - MOVING_AVERAGE_LENGTH
+  averged_data = np.zeros((2, length))
+  for i in range(length):
+   for j in range(MOVING_AVERAGE_LENGTH):
+     averged_data[:,i]=averged_data[:,i]+data[:,i+j]
+   averged_data[0,i]=float(averged_data[0,i])/MOVING_AVERAGE_LENGTH
+   if averged_data[1,i] != MOVING_AVERAGE_LENGTH:
+     averged_data[1,i]=0
+   else:
+     averged_data[1,i]=1
+  return averged_data
+
+def prepare_training_data(data):
+  length = data.shape[1]
+  length = length - FEATURE_NUMBER
+  y1=np.zeros((length, FEATURE_NUMBER+2))
+  for j in range(length):
+    y1[j, FEATURE_NUMBER+1]=1
+  for k in range(length):
+    y1[k, 0:FEATURE_NUMBER+1]=data[0, k:k+FEATURE_NUMBER+1]
+  for k in range(length):
+    y1[k, FEATURE_NUMBER+1]=sum(data[1,k:k+FEATURE_NUMBER+1])
+    if y1[k, FEATURE_NUMBER+1] != FEATURE_NUMBER+1:
+      y1[k, FEATURE_NUMBER+1]=0
+    else:
+      y1[k, FEATURE_NUMBER+1]=1
   y2=[]
-  for k in range(997):
-      if(y1[k][4]!=0):
+  for k in range(length):
+      if(y1[k,4]!=0):
           col=[y1[k][0],y1[k][1],y1[k][2],y1[k][3]]
           y2.append(col)
   z=[]
@@ -137,7 +147,9 @@ def dummy_sample():
 def main():
   # TODO ADD DATA:
   # Because feature add label 
-  dataset, origin_data = dummy_sample()
+  data = dummy_sample()
+  averged_data = get_moving_average(data)
+  dataset, origin_data = prepare_training_data(averged_data)
   run_training(dataset, origin_data)
 
 
