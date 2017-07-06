@@ -1,5 +1,6 @@
 import numpy as np 
 from scipy import stats
+import math
 
 def dummy_data_random():
   return np.random.randn(100)*20
@@ -25,21 +26,24 @@ def normalize(data):
   return data, max_value, min_value
 
 def get_threshold(data):
+  slope, intercept, _ , _, _ = stats.linregress(
+                        [i for i in range(len(data))], data)
   upperbound = -10000.0
   lowerbound = 10000.0
-  for i in range(len(data)-1):
-    upperbound = max(upperbound, data[i+1]-data[i])
-    lowerbound = min(lowerbound, data[i+1]-data[i])
-  return upperbound, lowerbound
+  for i in range(len(data)):
+    distance = (slope * i - data[i] + intercept)/(math.sqrt(1 + slope**2))
+    upperbound = max(upperbound, distance)
+    lowerbound = min(lowerbound, distance)
+  return upperbound, lowerbound, slope
 
 def get_prediction(nextdata, data):
   data = data.astype(float)
   normalized_data, max_value, min_value = normalize(data)
-  upperbound, lowerbound = get_threshold(normalized_data)
-  upperbound = upperbound * (max_value-min_value)
-  lowerbound = lowerbound * (max_value-min_value)
+  upperbound, lowerbound, slope = get_threshold(normalized_data)
+  upperbound = upperbound * (max_value-min_value)*(math.sqrt(1 + slope**2))
+  lowerbound = lowerbound * (max_value-min_value)*(math.sqrt(1 + slope**2))
   print("The prediction is %.2f, the upperbound is %.2f, the lowerbound is %.2f"%
-                             (nextdata, data[-1]+upperbound, data[-1]+lowerbound))
+                             (nextdata, nextdata+upperbound, nextdata+lowerbound))
 def check_natura_change(data):
   pre_slope,_,_, _,pre_std_err = stats.linregress(
                         [i for i in range(len(data[:-30]))], data[:-30])
@@ -51,11 +55,10 @@ def check_natura_change(data):
     print("============Nature Change!!!!================")
 
 def main():
-  data = dummy_data_random()
+  data = dummy_data_linear()
   # Be careful, the data need to be float!!!!
   data = data.astype(float)
   normalized_data, max_value, min_value = normalize(data)
-  upperbound, lowerbound = get_threshold(normalized_data)
 
   # Check whether the nature change
   check_natura_change(normalized_data)
@@ -76,7 +79,7 @@ def main():
     # Then check whether it is linear or not, checked by r_value:
     slope, intercept, r_value, _, _ = stats.linregress(
                         [i for i in range(len(normalized_data))], normalized_data)
-    print("The slope is %.2f, The intercep is %.2f, The r value is %.2f"%
+    print("The slope is %.2f, The intercept is %.2f, The r value is %.2f"%
                                             (slope, intercept, r_value))
     if r_value**2 > 0.98:
       # The data is linear
