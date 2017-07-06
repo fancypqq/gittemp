@@ -14,6 +14,10 @@ def dummy_data_constant():
 def dummy_data_jump():
   return np.array([ [i*10 for _ in range(20)] for i in range(5)]).reshape(-1)
 
+def dummy_data_period():
+  x = np.linspace(0, 5 * np.pi, 100)
+  return np.cos(x)
+
 def normalize(data):
   data = data.astype(float)
   min_value = min(data)
@@ -44,7 +48,7 @@ def get_prediction(nextdata, data):
   lowerbound = lowerbound * (max_value-min_value)*(math.sqrt(1 + slope**2))
   print("The prediction is %.2f, the upperbound is %.2f, the lowerbound is %.2f"%
                              (nextdata, nextdata+upperbound, nextdata+lowerbound))
-def check_natura_change(data):
+def check_nature_change(data):
   pre_slope,_,_, _,pre_std_err = stats.linregress(
                         [i for i in range(len(data[:-30]))], data[:-30])
   end_slope,_,_, _,end_std_err = stats.linregress(
@@ -54,14 +58,45 @@ def check_natura_change(data):
   if abs(end_slope-pre_slope)/abs(pre_slope+0.01) > 1 or abs(end_std_err - pre_std_err)/abs(pre_std_err+0.01) > 1:
     print("============Nature Change!!!!================")
 
+def check_period(data):
+  change_point=[]
+  length = len(data)
+  if length < 5:
+    # False means there is no period
+    return False
+  Increase = data[1] >= data[0]
+  for i in range(1,len(data)-1):
+    if Increase != (data[i+1] >= data[i]):
+      Increase =  data[i+1] >= data[i]
+      change_point.append(i)
+  gap=[]
+  for i in range(len(change_point)-1):
+    gap.append(change_point[i+1]-change_point[i])
+  # calculate gap variance
+  gap=np.array(gap)
+  if len(gap)>1:
+    var=math.sqrt(np.sum(gap*gap)/len(gap)-(gap.sum()/len(gap))**2)/np.mean(gap)
+    if np.mean(gap)>3 and var<1:
+      return True
+  return False
+
+
 def main():
-  data = dummy_data_linear()
+  data = dummy_data_constant()
   # Be careful, the data need to be float!!!!
   data = data.astype(float)
   normalized_data, max_value, min_value = normalize(data)
 
   # Check whether the nature change
-  check_natura_change(normalized_data)
+  check_nature_change(normalized_data)
+
+  # Check period:
+  Period = check_period(normalized_data)
+  if Period:
+    print("The data is period!")
+  else:
+    print("The data is not period!")
+
 
   # Check whether the last 30 data is unchanged or not:
   _, truncated_max, truncated_min = normalize(data[-30:])
