@@ -40,14 +40,34 @@ def get_threshold(data):
     lowerbound = min(lowerbound, distance)
   return upperbound, lowerbound, slope
 
+def Increase_Ratio(data):
+  Increase = 0
+  Decrease = 0
+  for i in range(len(data)-1):
+    if data[i+1]>data[i]:
+      Increase += 1
+    if data[i+1]<data[i]:
+      Decrease += 1
+  if Increase > 0.8*(Decrease+Increase):
+    return True
+  else:
+    return False
+
 def get_prediction(nextdata, data):
   data = data.astype(float)
   normalized_data, max_value, min_value = normalize(data)
   upperbound, lowerbound, slope = get_threshold(normalized_data)
   upperbound = upperbound * (max_value-min_value)*(math.sqrt(1 + slope**2))
   lowerbound = lowerbound * (max_value-min_value)*(math.sqrt(1 + slope**2))
-  print("The prediction is %.2f, the upperbound is %.2f, the lowerbound is %.2f"%
+  Increase_Flag = Increase_Ratio(data)
+  if Increase_Flag:
+    print("++++++++")
+    print("The prediction is %.2f, the upperbound is %.2f, the lowerbound is %.2f"%
+                             (nextdata, nextdata+upperbound, data[-1]+0.2*lowerbound))
+  else:
+    print("The prediction is %.2f, the upperbound is %.2f, the lowerbound is %.2f"%
                              (nextdata, nextdata+upperbound, nextdata+lowerbound))
+
 def check_nature_change(data):
   pre_slope,_,_, _,pre_std_err = stats.linregress(
                         [i for i in range(len(data[:-30]))], data[:-30])
@@ -82,7 +102,7 @@ def check_period(data):
 
 
 def main():
-  data = dummy_data_constant()
+  data = dummy_data_linear()
   # Be careful, the data need to be float!!!!
   data = data.astype(float)
   normalized_data, max_value, min_value = normalize(data)
